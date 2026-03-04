@@ -5,11 +5,18 @@ import { useCronogramaStore } from '@/store/cronogramaStore';
 
 export default function DataInitializer({ children }: { children: React.ReactNode }) {
   const store = useCronogramaStore();
+  const hasHydrated = useCronogramaStore((state) => state._hasHydrated);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const initRef = useRef(false);
 
   useEffect(() => {
+    // Aguardar hidratação do Zustand antes de inicializar
+    if (!hasHydrated) {
+      console.log('⏳ Aguardando hidratação do Zustand...');
+      return;
+    }
+
     // Prevenir múltiplas inicializações
     if (initRef.current) {
       return;
@@ -21,13 +28,17 @@ export default function DataInitializer({ children }: { children: React.ReactNod
       try {
         console.log('🔄 Inicializando sistema...');
         
-        // Esperar um pouco para garantir que a hidratação aconteceu
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Verificar se já temos dados no localStorage após hidratação
+        const localData = store.data;
         
-        // Verificar dados do localStorage primeiro (mais rápido)
-        const localData = useCronogramaStore.getState().data;
+        if (localData && localData.projects) {
+          console.log('✓ Dados encontrados no localStorage');
+          setLoading(false);
+          return;
+        }
         
-        // Carregar dados do servidor (sempre tem dados - seja do arquivo ou padrão)
+        // Se não há dados locais, carregar do servidor
+        console.log('📡 Carregando dados do servidor...');
         const savedResponse = await fetch('/api/cronograma', {
           cache: 'no-store',
         });
@@ -38,36 +49,25 @@ export default function DataInitializer({ children }: { children: React.ReactNod
 
         const savedDataResponse = await savedResponse.json();
         
-        // Dados do servidor têm prioridade sobre localStorage
         if (savedDataResponse && savedDataResponse.data) {
           console.log('✓ Dados carregados do servidor');
           store.setData(savedDataResponse.data);
           setLoading(false);
           return;
         }
-        
-        // Se por algum motivo o servidor não retornar dados, usar localStorage
-        if (localData && localData.projects) {
-          console.log('✓ Dados carregados do localStorage (fallback)');
-          store.setData(localData);
-          setLoading(false);
-          return;
-        }
 
-        // Isso não deveria acontecer, mas caso aconteça
-        throw new Error('Nenhum dado disponível');
+        throw new Error('Nenhum dado disponível no servidor');
         
       } catch (err) {
         console.error('✗ Erro ao inicializar dados:', err);
         setError('Erro ao carregar dados. Tente recarregar a página.');
         initRef.current = false; // Permitir retry
-      } finally {
         setLoading(false);
       }
     }
 
     initializeData();
-  }, []);
+  }, [hasHydrated, store]);
 
   if (loading) {
     return (

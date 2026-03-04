@@ -60,22 +60,61 @@ export default function GitHubTasksView() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const cacheKeyRef = useRef<string>('');
 
+  // Função para limpar todos os caches
+  const clearAllCaches = () => {
+    try {
+      // Limpar sessionStorage
+      const sessionKeys = Object.keys(sessionStorage);
+      sessionKeys.forEach(key => {
+        if (key.startsWith('github-issues-')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      
+      // Limpar localStorage (dados antigos)
+      const localKeys = Object.keys(localStorage);
+      localKeys.forEach(key => {
+        if (key.startsWith('github-issues-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      console.log('✓ Caches limpos com sucesso');
+      alert('Caches limpos! Recarregando dados...');
+      
+      // Recarregar dados
+      fetchIssues(true);
+    } catch (e) {
+      console.error('Erro ao limpar caches:', e);
+      alert('Erro ao limpar caches. Tente recarregar a página.');
+    }
+  };
+
   useEffect(() => {
+    // Limpar possíveis caches antigos do localStorage (migração)
+    try {
+      const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('github-issues-'));
+      oldKeys.forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+      // Ignorar erro de localStorage
+    }
+
     // Carrega do cache do navegador se existir
     const cacheKey = `github-issues-${filter}-${periodFilter}`;
     cacheKeyRef.current = cacheKey;
     
-    const cachedData = sessionStorage.getItem(cacheKey);
-    if (cachedData) {
-      try {
+    try {
+      const cachedData = sessionStorage.getItem(cacheKey);
+      if (cachedData) {
         const parsed = JSON.parse(cachedData);
         setData(parsed.data);
         setLastUpdate(new Date(parsed.timestamp));
         setLoading(false);
         return;
-      } catch (e) {
-        // Se falhar ao parsear, busca normalmente
       }
+    } catch (e) {
+      // Se falhar ao parsear ou acessar sessionStorage, busca normalmente
+      console.warn('Erro ao ler cache:', e);
     }
     
     // Se não tem cache, busca do servidor
@@ -127,10 +166,60 @@ export default function GitHubTasksView() {
       setLastUpdate(now);
       
       // Salvar no cache do navegador (sempre, mesmo com refresh forçado)
-      sessionStorage.setItem(cacheKeyRef.current, JSON.stringify({
-        data,
-        timestamp: now.toISOString()
-      }));
+      try {
+        // Limitar o que é guardado no cache - apenas os dados essenciais
+        const cacheData = {
+          data: {
+            issues: data.issues.map((issue: GitHubIssue) => ({
+              id: issue.id,
+              number: issue.number,
+              title: issue.title,
+              state: issue.state,
+              html_url: issue.html_url,
+              created_at: issue.created_at,
+              updated_at: issue.updated_at,
+              labels: issue.labels,
+              assignees: issue.assignees.map((a: GitHubUser) => ({
+                login: a.login,
+                avatar_url: a.avatar_url
+              })),
+              user: { login: issue.user.login, avatar_url: issue.user.avatar_url },
+              comments: issue.comments,
+              milestone: issue.milestone,
+              // Não cachear body completo para economizar espaço
+              body: issue.body ? issue.body.substring(0, 500) : null
+            })),
+            total: data.total,
+            repository: data.repository
+          },
+          timestamp: now.toISOString()
+        };
+        
+        sessionStorage.setItem(cacheKeyRef.current, JSON.stringify(cacheData));
+      } catch (storageError) {
+        // Se der erro de quota, limpar outros caches e tentar novamente
+        if (storageError instanceof Error && storageError.name === 'QuotaExceededError') {
+          console.warn('SessionStorage cheio, limpando caches antigos...');
+          try {
+            // Limpar todos os caches de GitHub issues, exceto o atual
+            const keys = Object.keys(sessionStorage);
+            keys.forEach(key => {
+              if (key.startsWith('github-issues-') && key !== cacheKeyRef.current) {
+                sessionStorage.removeItem(key);
+              }
+            });
+            // Tentar salvar novamente (versão menor)
+            const minimalCache = {
+              data: { issues: [], total: data.total, repository: data.repository },
+              timestamp: now.toISOString()
+            };
+            sessionStorage.setItem(cacheKeyRef.current, JSON.stringify(minimalCache));
+          } catch (e) {
+            // Se ainda assim falhar, ignora o cache
+            console.error('Não foi possível salvar cache:', e);
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
@@ -482,6 +571,24 @@ export default function GitHubTasksView() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+          </button>
+          
+          {/* Botão de Limpar Cache */}
+          <button
+            onClick={clearAllCaches}
+            disabled={isRefreshing}
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Limpar cache e recarregar dados"
+          >
+            <svg 
+              className="w-4 h-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Limpar Cache
           </button>
           
           {/* Tooltip de cálculo de horas */}

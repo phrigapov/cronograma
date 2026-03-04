@@ -153,6 +153,32 @@ export const useCronogramaStore = create<CronogramaState>()(
         state?.setHasHydrated(true);
       },
       partialize: (state) => ({ data: state.data }),
+      // Aumentar threshold de storage e adicionar tratamento de erro
+      version: 1,
+      migrate: (persistedState: any, version: number) => {
+        // Migração futura se necessário
+        return persistedState as CronogramaState;
+      },
     }
   )
 );
+
+// Adicionar listener para erros de quota
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', (e) => {
+    if (e.message?.includes('QuotaExceededError') || 
+        e.message?.includes('exceeded the quota')) {
+      console.error('LocalStorage cheio! Limpando dados antigos...');
+      try {
+        // Limpar caches do GitHub que podem estar no localStorage
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('github-')) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (err) {
+        console.error('Erro ao limpar storage:', err);
+      }
+    }
+  });
+}
