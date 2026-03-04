@@ -5,6 +5,7 @@ import { useState, ReactNode } from 'react';
 interface Tab {
   id: string;
   label: string;
+  description?: string;
   icon?: ReactNode;
 }
 
@@ -36,7 +37,14 @@ export default function Tabs({ tabs, children }: TabsProps) {
               `}
             >
               {tab.icon && <span>{tab.icon}</span>}
-              {tab.label}
+              <div className="flex flex-col items-start">
+                <span>{tab.label}</span>
+                {tab.description && (
+                  <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {tab.description}
+                  </span>
+                )}
+              </div>
             </button>
           ))}
         </div>

@@ -15,7 +15,7 @@ export default function Home() {
   const data = useCronogramaStore((state) => state.data);
 
   const tabs = [
-    { id: 'cronograma', label: 'Cronograma', icon: <Calendar size={18} /> },
+    { id: 'cronograma', label: 'Planejamento 2026', description: 'Cronograma', icon: <Calendar size={18} /> },
     { id: 'infraestrutura', label: 'Infraestrutura', icon: <Server size={18} /> },
     { id: 'github', label: 'Tarefas GitHub', icon: <Github size={18} /> },
     { id: 'features', label: 'Gerenciar Features', icon: <ListPlus size={18} /> },
