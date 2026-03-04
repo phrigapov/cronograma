@@ -13,14 +13,15 @@ npm run lint      # eslint (no test suite exists)
 ## Architecture
 
 **Data flow:**
-1. On boot, `DataInitializer` fetches `/api/cronograma` (server JSON). On 404/empty, falls back to `/api/csv-inicial` (initial CSV).
-2. Parsed data is loaded into Zustand store (`useCronogramaStore`).
-3. Every mutation in the store calls `setData()`, which POSTs the full state to `/api/cronograma`, writing `data/cronograma.json`. State is also persisted to `localStorage` via `zustand/middleware/persist` (key: `cronograma-storage`).
-4. Components read from the store via hooks; no prop-drilling.
+1. On boot, `DataInitializer` fetches `/api/cronograma` (server JSON).
+2. API always returns data: either from `data/cronograma.json` or default data structure if file doesn't exist.
+3. Parsed data is loaded into Zustand store (`useCronogramaStore`).
+4. Every mutation in the store calls `setData()`, which POSTs the full state to `/api/cronograma`, writing `data/cronograma.json`. State is also persisted to `localStorage` via `zustand/middleware/persist` (key: `cronograma-storage`).
+5. Components read from the store via hooks; no prop-drilling.
 
 **API routes** (`app/api/`):
-- `GET/POST /api/cronograma` – reads/writes `data/cronograma.json`
-- `GET /api/csv-inicial` – serves `public/cronograma-inicial.csv`
+- `GET/POST /api/cronograma` – reads/writes `data/cronograma.json`, creates it with default data if doesn't exist
+- `GET /api/csv-inicial` – (optional) serves `public/cronograma-inicial.csv` for import feature only
 
 **Key layers:**
 - `types/cronograma.ts` – single source of truth for all interfaces (`Project → Phase → Feature → WeekAssignment`) and the `MONTHS` constant (Feb–Dec 2026)

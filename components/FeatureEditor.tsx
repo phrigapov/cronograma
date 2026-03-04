@@ -82,11 +82,11 @@ export default function FeatureEditor() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Gerenciar Features</h2>
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Gerenciar Features</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             Selecione o Projeto
           </label>
           <select
@@ -95,7 +95,7 @@ export default function FeatureEditor() {
               setSelectedProject(e.target.value);
               setSelectedPhase('');
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
           >
             <option value="">-- Selecione --</option>
             {data.projects.map((project) => (
@@ -108,13 +108,13 @@ export default function FeatureEditor() {
 
         {selectedProject && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Selecione a Fase
             </label>
             <select
               value={selectedPhase}
               onChange={(e) => setSelectedPhase(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
             >
               <option value="">-- Selecione --</option>
               {selectedProjectData?.phases.map((phase) => (
@@ -131,48 +131,48 @@ export default function FeatureEditor() {
         <>
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mb-4"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 mb-4"
           >
             <Plus size={20} />
             Nova Feature
           </button>
 
           {showAddForm && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-              <h3 className="font-semibold mb-3">Adicionar Nova Feature</h3>
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border-2 border-blue-200 dark:border-blue-700">
+              <h3 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">Adicionar Nova Feature</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Nome da Feature *
                   </label>
                   <input
                     type="text"
                     value={newFeature.name}
                     onChange={(e) => setNewFeature({ ...newFeature, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     placeholder="Ex: Tela de Login"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Responsável *
                   </label>
                   <input
                     type="text"
                     value={newFeature.responsible}
                     onChange={(e) => setNewFeature({ ...newFeature, responsible: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                     placeholder="Ex: dev, Jonatas, guga"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Mês Inicial *
                   </label>
                   <select
                     value={newFeature.startMonth}
                     onChange={(e) => setNewFeature({ ...newFeature, startMonth: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">-- Selecione --</option>
                     {MONTHS.map((month) => (
@@ -183,13 +183,13 @@ export default function FeatureEditor() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Mês Final *
                   </label>
                   <select
                     value={newFeature.endMonth}
                     onChange={(e) => setNewFeature({ ...newFeature, endMonth: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
                     <option value="">-- Selecione --</option>
                     {MONTHS.map((month) => (
@@ -203,13 +203,13 @@ export default function FeatureEditor() {
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={handleAddFeature}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-600"
                 >
                   Adicionar
                 </button>
                 <button
                   onClick={() => setShowAddForm(false)}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500"
                 >
                   Cancelar
                 </button>
@@ -218,17 +218,17 @@ export default function FeatureEditor() {
           )}
 
           <div className="space-y-2">
-            <h3 className="font-semibold text-gray-700 mb-2">
+            <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">
               Features de {selectedPhaseData?.name}:
             </h3>
             {selectedPhaseData?.features.map((feature) => (
               <div
                 key={feature.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600"
               >
                 <div className="flex-1">
-                  <div className="font-medium text-gray-800">{feature.name}</div>
-                  <div className="text-sm text-gray-500">
+                  <div className="font-medium text-gray-800 dark:text-gray-100">{feature.name}</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     {feature.weeks.length > 0 && (
                       <>
                         {feature.weeks[0].responsible} •{' '}
@@ -239,7 +239,7 @@ export default function FeatureEditor() {
                 </div>
                 <button
                   onClick={() => handleDeleteFeature(feature.id, feature.name)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-full"
+                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-full"
                   title="Excluir feature"
                 >
                   <Trash2 size={18} />
@@ -247,7 +247,7 @@ export default function FeatureEditor() {
               </div>
             ))}
             {selectedPhaseData?.features.length === 0 && (
-              <p className="text-gray-500 text-sm italic">Nenhuma feature cadastrada</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm italic">Nenhuma feature cadastrada</p>
             )}
           </div>
         </>

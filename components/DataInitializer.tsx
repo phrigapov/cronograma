@@ -1,56 +1,73 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useCronogramaStore } from '@/store/cronogramaStore';
-import { parseCSV } from '@/lib/csvParser';
 
 export default function DataInitializer({ children }: { children: React.ReactNode }) {
-  const { data, setData } = useCronogramaStore();
+  const store = useCronogramaStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const initRef = useRef(false);
 
   useEffect(() => {
+    // Prevenir múltiplas inicializações
+    if (initRef.current) {
+      return;
+    }
+
+    initRef.current = true;
+
     async function initializeData() {
       try {
-        // Tentar carregar dados salvos do servidor
-        const savedResponse = await fetch('/api/cronograma');
+        console.log('🔄 Inicializando sistema...');
         
-        if (savedResponse.ok) {
-          const savedData = await savedResponse.json();
-          
-          // Verifica se há dados válidos (não apenas { data: null })
-          if (savedData && savedData.data && savedData.data.projects) {
-            setData(savedData.data);
-            setLoading(false);
-            return;
-          }
+        // Esperar um pouco para garantir que a hidratação aconteceu
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verificar dados do localStorage primeiro (mais rápido)
+        const localData = useCronogramaStore.getState().data;
+        
+        // Carregar dados do servidor (sempre tem dados - seja do arquivo ou padrão)
+        const savedResponse = await fetch('/api/cronograma', {
+          cache: 'no-store',
+        });
+        
+        if (!savedResponse.ok) {
+          throw new Error('Erro ao comunicar com o servidor');
         }
 
-        // Se não houver dados salvos, carregar CSV inicial
-        const csvResponse = await fetch('/api/csv-inicial');
+        const savedDataResponse = await savedResponse.json();
         
-        if (!csvResponse.ok) {
-          throw new Error('Erro ao carregar dados iniciais');
+        // Dados do servidor têm prioridade sobre localStorage
+        if (savedDataResponse && savedDataResponse.data) {
+          console.log('✓ Dados carregados do servidor');
+          store.setData(savedDataResponse.data);
+          setLoading(false);
+          return;
+        }
+        
+        // Se por algum motivo o servidor não retornar dados, usar localStorage
+        if (localData && localData.projects) {
+          console.log('✓ Dados carregados do localStorage (fallback)');
+          store.setData(localData);
+          setLoading(false);
+          return;
         }
 
-        const { csv } = await csvResponse.json();
-        const parsedData = parseCSV(csv);
-        setData(parsedData);
+        // Isso não deveria acontecer, mas caso aconteça
+        throw new Error('Nenhum dado disponível');
         
       } catch (err) {
-        console.error('Erro ao inicializar dados:', err);
-        setError('Erro ao carregar dados. Entre em contato com o suporte.');
+        console.error('✗ Erro ao inicializar dados:', err);
+        setError('Erro ao carregar dados. Tente recarregar a página.');
+        initRef.current = false; // Permitir retry
       } finally {
         setLoading(false);
       }
     }
 
-    if (!data) {
-      initializeData();
-    } else {
-      setLoading(false);
-    }
-  }, [data, setData]);
+    initializeData();
+  }, []);
 
   if (loading) {
     return (
@@ -74,7 +91,23 @@ export default function DataInitializer({ children }: { children: React.ReactNod
             </svg>
             <h2 className="text-xl font-bold mb-2">Erro ao Carregar Dados</h2>
             <p className="text-sm text-gray-600 mb-4">{error}</p>
-            <p className="text-xs text-gray-500">Entre em contato com o suporte técnico.</p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Recarregar Página
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.clear();
+                  window.location.reload();
+                }}
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Limpar Cache
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -19,7 +19,7 @@ export default function Tabs({ tabs, children }: TabsProps) {
   return (
     <div className="w-full">
       {/* Tab Headers */}
-      <div className="bg-white rounded-t-lg shadow-md border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-t-lg shadow-md border-b border-gray-200 dark:border-gray-700">
         <div className="flex overflow-x-auto">
           {tabs.map((tab, index) => (
             <button
@@ -30,8 +30,8 @@ export default function Tabs({ tabs, children }: TabsProps) {
                 transition-all duration-200 border-b-2
                 ${
                   activeTab === index
-                    ? 'text-blue-600 border-blue-600 bg-blue-50'
-                    : 'text-gray-600 border-transparent hover:text-blue-500 hover:bg-gray-50'
+                    ? 'text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-gray-700'
+                    : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }
               `}
             >
@@ -43,7 +43,7 @@ export default function Tabs({ tabs, children }: TabsProps) {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white rounded-b-lg shadow-lg">
+      <div className="bg-white dark:bg-gray-800 rounded-b-lg shadow-lg">
         {children[activeTab]}
       </div>
     </div>

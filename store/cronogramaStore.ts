@@ -1,21 +1,28 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { CronogramaState, TimelineData, Project, Feature } from '@/types/cronograma';
 
 export const useCronogramaStore = create<CronogramaState>()(
   persist(
     (set, get) => ({
       data: null,
+      _hasHydrated: false,
+      
+      setHasHydrated: (state: boolean) => {
+        set({ _hasHydrated: state });
+      },
       
       setData: (data: TimelineData) => {
         set({ data });
-        // Salvar no servidor
+        // Salvar no servidor de forma assíncrona
         if (typeof window !== 'undefined') {
           fetch('/api/cronograma', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
-          }).catch(console.error);
+          })
+          .then(() => console.log('✓ Dados salvos no servidor'))
+          .catch((err) => console.error('✗ Erro ao salvar no servidor:', err));
         }
       },
       
@@ -141,6 +148,11 @@ export const useCronogramaStore = create<CronogramaState>()(
     }),
     {
       name: 'cronograma-storage',
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+      partialize: (state) => ({ data: state.data }),
     }
   )
 );

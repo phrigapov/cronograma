@@ -55,7 +55,7 @@ export default function ReportGenerator() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Gerar Relatórios</h2>
+      <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">Gerar Relatórios</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <button
@@ -101,31 +101,31 @@ export default function ReportGenerator() {
         </button>
       </div>
 
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h3 className="font-semibold text-blue-900 mb-2">Estatísticas</h3>
+      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+        <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Estatísticas</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-blue-600">{data.projects.length}</div>
-            <div className="text-sm text-gray-600">Projetos</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.projects.length}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Projetos</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {data.projects.reduce((sum, p) => sum + p.phases.length, 0)}
             </div>
-            <div className="text-sm text-gray-600">Fases</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Fases</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {data.projects.reduce(
                 (sum, p) => sum + p.phases.reduce((pSum, phase) => pSum + phase.features.length, 0),
                 0
               )}
             </div>
-            <div className="text-sm text-gray-600">Features</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Features</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-blue-600">{data.months.length}</div>
-            <div className="text-sm text-gray-600">Meses</div>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{data.months.length}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Meses</div>
           </div>
         </div>
       </div>
