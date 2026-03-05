@@ -32,6 +32,9 @@ interface GitHubIssue {
   body: string | null;
   comments: number;
   milestone?: GitHubMilestone | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: string | null;
 }
 
 interface GitHubResponse {
@@ -58,6 +61,10 @@ export default function GitHubTasksView() {
   const [selectedPerson, setSelectedPerson] = useState<string>('all');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'cards' | 'table'>('cards');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedLabel, setSelectedLabel] = useState<string>('all');
+  const [selectedState, setSelectedState] = useState<string>('all');
   const cacheKeyRef = useRef<string>('');
 
   // Função para limpar todos os caches
@@ -80,7 +87,6 @@ export default function GitHubTasksView() {
       });
       
       console.log('✓ Caches limpos com sucesso');
-      alert('Caches limpos! Recarregando dados...');
       
       // Recarregar dados
       fetchIssues(true);
@@ -107,6 +113,26 @@ export default function GitHubTasksView() {
       const cachedData = sessionStorage.getItem(cacheKey);
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
+        
+        // Validar se o cache é do período correto
+        // Se for 'all', verificar se realmente tem dados antigos
+        if (periodFilter === 'all') {
+          // Para 'all', só aceitar cache se tiver issues de antes de 2026
+          const hasOldIssues = parsed.data.issues.some((issue: GitHubIssue) => {
+            const createdDate = new Date(issue.created_at);
+            return createdDate.getFullYear() < 2026;
+          });
+          
+          // Se não tem issues antigas, o cache pode estar incompleto
+          if (!hasOldIssues && parsed.data.total < 50) {
+            // Cache suspeito, buscar novamente
+            console.log('Cache incompleto detectado, buscando novamente...');
+            sessionStorage.removeItem(cacheKey);
+            fetchIssues();
+            return;
+          }
+        }
+        
         setData(parsed.data);
         setLastUpdate(new Date(parsed.timestamp));
         setLoading(false);
@@ -156,11 +182,27 @@ export default function GitHubTasksView() {
       
       // Adiciona timestamp para forçar refresh do cache quando necessário
       const timestamp = forceRefresh ? `&_t=${Date.now()}` : '';
-      const response = await fetch(`/api/github-issues?state=${filter}${sinceParam}${timestamp}`);
+      const url = `/api/github-issues?state=${filter}${sinceParam}${timestamp}`;
+      
+      console.log('🔍 Buscando issues:', { 
+        filter, 
+        periodFilter, 
+        sinceParam: sinceParam || 'SEM FILTRO (todas as issues)',
+        url 
+      });
+      
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Erro ao buscar tarefas do GitHub');
       }
       const data = await response.json();
+      
+      console.log('✓ Issues recebidas:', {
+        total: data.total,
+        oldestIssue: data.issues.length > 0 ? data.issues[data.issues.length - 1].created_at : 'N/A',
+        newestIssue: data.issues.length > 0 ? data.issues[0].created_at : 'N/A'
+      });
+      
       setData(data);
       const now = new Date();
       setLastUpdate(now);
@@ -186,6 +228,10 @@ export default function GitHubTasksView() {
               user: { login: issue.user.login, avatar_url: issue.user.avatar_url },
               comments: issue.comments,
               milestone: issue.milestone,
+              // Campos customizados do projeto
+              startDate: issue.startDate,
+              endDate: issue.endDate,
+              status: issue.status,
               // Não cachear body completo para economizar espaço
               body: issue.body ? issue.body.substring(0, 500) : null
             })),
@@ -475,8 +521,28 @@ export default function GitHubTasksView() {
       }
     }
     
+    // Filtro de status
+    if (selectedStatus !== 'all') {
+      issues = issues.filter(issue => {
+        const issueStatus = issue.status || (issue.state === 'open' ? 'Sprint' : 'Closed');
+        return issueStatus === selectedStatus;
+      });
+    }
+    
+    // Filtro de label
+    if (selectedLabel !== 'all') {
+      issues = issues.filter(issue => 
+        issue.labels.some(label => label.name === selectedLabel)
+      );
+    }
+    
+    // Filtro de estado (open/closed)
+    if (selectedState !== 'all') {
+      issues = issues.filter(issue => issue.state === selectedState);
+    }
+    
     return issues;
-  }, [data, searchTerm, selectedPerson]);
+  }, [data, searchTerm, selectedPerson, selectedStatus, selectedLabel, selectedState]);
 
   if (loading) {
     return (
@@ -904,20 +970,121 @@ export default function GitHubTasksView() {
         </div>
       </div>
 
-      {/* Issues List - Compact View */}
+      {/* Issues List - Sub-tabs */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        {/* Sub-tabs Navigation */}
+        <div className="flex items-center justify-between mb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveSubTab('cards')}
+              className={`px-4 py-2 font-medium text-sm transition-all border-b-2 ${
+                activeSubTab === 'cards'
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              📊 Cards
+            </button>
+            <button
+              onClick={() => setActiveSubTab('table')}
+              className={`px-4 py-2 font-medium text-sm transition-all border-b-2 ${
+                activeSubTab === 'table'
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+              }`}
+            >
+              📋 Tabela
+            </button>
+          </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             Tarefas ({filteredIssues.length})
-            {selectedPerson !== 'all' && (
+            {(selectedPerson !== 'all' || selectedStatus !== 'all' || selectedLabel !== 'all' || selectedState !== 'all') && (
               <button
-                onClick={() => setSelectedPerson('all')}
+                onClick={() => {
+                  setSelectedPerson('all');
+                  setSelectedStatus('all');
+                  setSelectedLabel('all');
+                  setSelectedState('all');
+                }}
                 className="ml-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
               >
-                Limpar filtro
+                Limpar filtros
               </button>
             )}
           </h3>
+        </div>
+
+        {/* Barra de Filtros */}
+        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Filtro por Status */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Status
+              </label>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Todos os Status</option>
+                {Array.from(new Set(data?.issues.map(i => i.status || (i.state === 'open' ? 'Sprint' : 'Closed')) || [])).map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por Label */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Label
+              </label>
+              <select
+                value={selectedLabel}
+                onChange={(e) => setSelectedLabel(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Todas as Labels</option>
+                {Array.from(new Set(data?.issues.flatMap(i => i.labels.map(l => l.name)) || [])).sort().map(label => (
+                  <option key={label} value={label}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por Pessoa */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Pessoa
+              </label>
+              <select
+                value={selectedPerson}
+                onChange={(e) => setSelectedPerson(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Todas as Pessoas</option>
+                <option value="unassigned">Sem atribuição</option>
+                {Array.from(new Set(data?.issues.flatMap(i => i.assignees.map(a => a.login)) || [])).sort().map(person => (
+                  <option key={person} value={person}>{person}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro por Estado */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Estado
+              </label>
+              <select
+                value={selectedState}
+                onChange={(e) => setSelectedState(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Todos os Estados</option>
+                <option value="open">🟢 Aberto</option>
+                <option value="closed">🔴 Fechado</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {filteredIssues.length === 0 ? (
@@ -926,7 +1093,7 @@ export default function GitHubTasksView() {
               Nenhuma tarefa encontrada
             </p>
           </div>
-        ) : (
+        ) : activeSubTab === 'cards' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredIssues.map((issue) => (
               <div
@@ -1046,6 +1213,145 @@ export default function GitHubTasksView() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          /* Table View */
+          <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">#</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Título</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Estado</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Assignees</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Labels</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Start Date</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">End Date</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700 dark:text-gray-300">Horas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredIssues.map((issue) => (
+                  <tr key={issue.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                      <a href={issue.html_url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 dark:hover:text-blue-400">
+                        #{issue.number}
+                      </a>
+                    </td>
+                    <td className="px-4 py-3">
+                      <a
+                        href={issue.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+                      >
+                        {issue.title}
+                      </a>
+                    </td>
+                    <td className="px-4 py-3">
+                      {issue.state === 'open' ? (
+                        <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
+                            <path fillRule="evenodd" d="M8 0a8 8 0 100 16A8 8 0 008 0zM1.5 8a6.5 6.5 0 1113 0 6.5 6.5 0 01-13 0z"/>
+                          </svg>
+                          Aberto
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400 font-medium">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M11.28 6.78a.75.75 0 00-1.06-1.06L7.25 8.69 5.78 7.22a.75.75 0 00-1.06 1.06l2 2a.75.75 0 001.06 0l3.5-3.5z"/>
+                            <path fillRule="evenodd" d="M16 8A8 8 0 110 8a8 8 0 0116 0zm-1.5 0a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/>
+                          </svg>
+                          Fechado
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {issue.assignees.length > 0 ? (
+                        <div className="flex -space-x-2">
+                          {issue.assignees.slice(0, 3).map((assignee) => (
+                            <img
+                              key={assignee.login}
+                              src={assignee.avatar_url}
+                              alt={assignee.login}
+                              className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-800"
+                              title={assignee.login}
+                            />
+                          ))}
+                          {issue.assignees.length > 3 && (
+                            <div className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-800 bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-xs font-bold text-gray-700 dark:text-gray-300">
+                              +{issue.assignees.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const status = issue.status || (issue.state === 'open' ? 'Sprint' : 'Closed');
+                        const statusColors: Record<string, string> = {
+                          'Sprint': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+                          'Test': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+                          'Desenvolvimento': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                          'Atendimento': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+                          'Alta Prioridade': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                          'Extração': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
+                          'Design': 'bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200',
+                          'Closed': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+                        };
+                        const colorClass = statusColors[status] || (issue.state === 'open' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200');
+                        
+                        return (
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${colorClass}`}>
+                            {status}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {issue.labels.slice(0, 2).map((label) => (
+                          <span
+                            key={label.id}
+                            className="px-2 py-0.5 rounded text-xs"
+                            style={{
+                              backgroundColor: `#${label.color}20`,
+                              color: `#${label.color}`,
+                              borderColor: `#${label.color}`,
+                              border: '1px solid'
+                            }}
+                          >
+                            {label.name}
+                          </span>
+                        ))}
+                        {issue.labels.length > 2 && (
+                          <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs">
+                            +{issue.labels.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                      {issue.startDate ? new Date(issue.startDate).toLocaleDateString('pt-BR') : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                      {issue.endDate ? new Date(issue.endDate).toLocaleDateString('pt-BR') : '-'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded text-xs font-bold">
+                        {extractHours(issue)}h
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

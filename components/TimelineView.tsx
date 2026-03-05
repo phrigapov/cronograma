@@ -8,6 +8,7 @@ import { Lock, LockOpen, ChevronLeft, ChevronRight, X } from 'lucide-react';
 export default function TimelineView() {
   const data = useCronogramaStore((state) => state.data);
   const updateFeature = useCronogramaStore((state) => state.updateFeature);
+  const setData = useCronogramaStore((state) => state.setData);
   const [isLocked, setIsLocked] = useState(true);
   const [editingFeature, setEditingFeature] = useState<string | null>(null);
   const [featureName, setFeatureName] = useState('');
@@ -123,6 +124,30 @@ export default function TimelineView() {
     setSelectedPeople(prev =>
       prev.includes(person) ? prev.filter(p => p !== person) : [...prev, person]
     );
+  };
+
+  const handleReloadFromServer = async () => {
+    if (!confirm('Recarregar dados do servidor? Isso substituirá as alterações locais não salvas.')) {
+      return;
+    }
+    
+    try {
+      // Limpar localStorage
+      localStorage.removeItem('cronograma-storage');
+      
+      // Buscar dados do servidor
+      const response = await fetch('/api/cronograma', { cache: 'no-store' });
+      const result = await response.json();
+      
+      if (result && result.data) {
+        setData(result.data);
+        alert('✓ Dados recarregados do servidor com sucesso!');
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar:', error);
+      alert('✗ Erro ao recarregar dados do servidor');
+    }
   };
 
   const handleCellClickNew = (
@@ -267,7 +292,33 @@ export default function TimelineView() {
           </div>
         </div>
 
-        {/* Controles de scroll e lock */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleReloadFromServer}
+            className="px-2 py-1 text-xs font-medium rounded bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center gap-1"
+            title="Recarregar dados do servidor (limpa cache local)"
+          >
+            🔄
+          </button>
+          
+          <button
+            onClick={() => setIsLocked(!isLocked)}
+            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors ${
+              isLocked
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}
+            title={isLocked ? 'Clique para desbloquear edição' : 'Clique para bloquear edição'}
+          >
+            {isLocked ? <Lock size={14} /> : <LockOpen size={14} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Navegação lateral com controles de scroll */}
+      <div className="flex justify-between items-center mb-4">
+        <div></div>
+        {/* Controles de scroll */}
         <div className="flex items-center gap-2">
           <button
             onClick={() => scroll('left')}
@@ -293,29 +344,6 @@ export default function TimelineView() {
             title="Rolar para direita"
           >
             <ChevronRight size={20} />
-          </button>
-
-          <div className="w-px h-8 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-
-          <button
-            onClick={() => setIsLocked(!isLocked)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
-              isLocked
-                ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
-            }`}
-          >
-            {isLocked ? (
-              <>
-                <Lock size={18} />
-                Bloqueado
-              </>
-            ) : (
-              <>
-                <LockOpen size={18} />
-                Editando
-              </>
-            )}
           </button>
         </div>
       </div>
@@ -557,20 +585,26 @@ export default function TimelineView() {
                 Categoria
               </label>
               <div className="flex flex-col gap-2">
-                {Object.entries(CATEGORIES).map(([key, cat]) => (
-                  <button
-                    key={key}
-                    onClick={() => setSelectedCategory(key as any)}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
-                      selectedCategory === key
-                        ? `${cat.color} text-white border-transparent`
-                        : `border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500`
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded ${selectedCategory === key ? 'bg-white/30' : cat.color}`}></div>
-                    <span className="font-medium">{cat.label}</span>
-                  </button>
-                ))}
+                {Object.entries(CATEGORIES).map(([key, cat]) => {
+                  const isSelected = selectedCategory === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedCategory(isSelected ? '' : key as any)}
+                      className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
+                        isSelected
+                          ? `${cat.color} text-white border-transparent`
+                          : `border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-gray-400 dark:hover:border-gray-500`
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded ${isSelected ? 'bg-white/30' : cat.color}`}></div>
+                      <span className="font-medium flex-1 text-left">{cat.label}</span>
+                      {isSelected && (
+                        <X size={16} className="ml-auto" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -597,6 +631,9 @@ export default function TimelineView() {
                         {person.initials}
                       </div>
                       <span className="text-sm font-medium">{person.name}</span>
+                      {isSelected && (
+                        <X size={14} className="ml-1" />
+                      )}
                     </button>
                   );
                 })}

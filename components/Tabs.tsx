@@ -27,7 +27,7 @@ export default function Tabs({ tabs, children }: TabsProps) {
               key={tab.id}
               onClick={() => setActiveTab(index)}
               className={`
-                flex items-center gap-2 px-6 py-4 font-semibold text-sm whitespace-nowrap
+                flex items-center gap-2 px-6 py-4 font-semibold text-sm
                 transition-all duration-200 border-b-2
                 ${
                   activeTab === index
@@ -38,7 +38,7 @@ export default function Tabs({ tabs, children }: TabsProps) {
             >
               {tab.icon && <span>{tab.icon}</span>}
               <div className="flex flex-col items-start">
-                <span>{tab.label}</span>
+                <span className="whitespace-pre-line text-center">{tab.label}</span>
                 {tab.description && (
                   <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
                     {tab.description}

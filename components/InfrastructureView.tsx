@@ -36,6 +36,7 @@ const INFRASTRUCTURE_TASKS = [
 export default function InfrastructureView() {
   const data = useCronogramaStore((state) => state.data);
   const updateProject = useCronogramaStore((state) => state.updateProject);
+  const setData = useCronogramaStore((state) => state.setData);
   const [isLocked, setIsLocked] = useState(true);
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [taskName, setTaskName] = useState('');
@@ -167,6 +168,30 @@ export default function InfrastructureView() {
     );
   };
 
+  const handleReloadFromServer = async () => {
+    if (!confirm('Recarregar dados do servidor? Isso substituirá as alterações locais não salvas.')) {
+      return;
+    }
+    
+    try {
+      // Limpar localStorage
+      localStorage.removeItem('cronograma-storage');
+      
+      // Buscar dados do servidor
+      const response = await fetch('/api/cronograma', { cache: 'no-store' });
+      const result = await response.json();
+      
+      if (result && result.data) {
+        setData(result.data);
+        alert('✓ Dados recarregados do servidor com sucesso!');
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Erro ao recarregar:', error);
+      alert('✗ Erro ao recarregar dados do servidor');
+    }
+  };
+
   const handleCellClick = (
     taskId: string,
     month: string,
@@ -246,17 +271,24 @@ export default function InfrastructureView() {
     <div className="space-y-4">
       {/* Controles */}
       <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleReloadFromServer}
+            className="px-2 py-1 text-xs font-medium rounded bg-green-600 hover:bg-green-700 text-white transition-colors flex items-center gap-1"
+            title="Recarregar dados do servidor (limpa cache local)"
+          >
+            🔄
+          </button>
+          
           <button
             onClick={() => setIsLocked(!isLocked)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+            className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-all ${
               isLocked
                 ? 'bg-red-500 hover:bg-red-600 text-white'
                 : 'bg-green-500 hover:bg-green-600 text-white'
             }`}
           >
-            {isLocked ? <Lock size={18} /> : <LockOpen size={18} />}
-            {isLocked ? 'Bloqueado' : 'Desbloqueado'}
+            {isLocked ? <Lock size={14} /> : <LockOpen size={14} />}
           </button>
         </div>
 

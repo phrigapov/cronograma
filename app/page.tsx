@@ -16,8 +16,8 @@ export default function Home() {
 
   const tabs = [
     { id: 'cronograma', label: 'Planejamento 2026', description: 'Cronograma', icon: <Calendar size={18} /> },
+    { id: 'github', label: 'Tarefas', description: 'Em execução', icon: <Github size={18} /> },
     { id: 'infraestrutura', label: 'Infraestrutura', icon: <Server size={18} /> },
-    { id: 'github', label: 'Tarefas GitHub', icon: <Github size={18} /> },
     { id: 'features', label: 'Gerenciar Features', icon: <ListPlus size={18} /> },
     { id: 'relatorios', label: 'Relatórios', icon: <FileText size={18} /> },
   ];
@@ -54,14 +54,14 @@ export default function Home() {
                 <TimelineView />
               </div>
 
-              {/* Aba 2: Infraestrutura */}
-              <div className="p-6">
-                <InfrastructureView />
-              </div>
-
-              {/* Aba 3: Tarefas GitHub */}
+              {/* Aba 2: Tarefas GitHub */}
               <div className="p-6">
                 <GitHubTasksView />
+              </div>
+
+              {/* Aba 3: Infraestrutura */}
+              <div className="p-6">
+                <InfrastructureView />
               </div>
 
               {/* Aba 4: Gerenciar Features */}
